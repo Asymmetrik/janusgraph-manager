@@ -141,10 +141,10 @@ export class JanusGraphManager {
     }
 
     /**
-     * Will pause execution until the management system reports that all indices on a graph have reached the REGISTERED state.
+     * Will pause execution until the management system reports that all indices on a graph have reached the REGISTERED or ENABLED state.
      * @param schema GraphSchema to process.
      * @param graph Name of the traversal alias to analyze. Default: `graph`
-     * @returns A promise with the number of indices that reached REGISTERED state.
+     * @returns A promise with the number of indices that reached REGISTERED or ENABLED state.
      */
     async waitForIndices(schema: GraphSchema, graph?: string): Promise<number> {
         try {
@@ -162,10 +162,10 @@ export class JanusGraphManager {
     }
 
     /**
-     * Will pause execution until the management system reports that a single index on a graph has reached the REGISTERED state.
+     * Will pause execution until the management system reports that a single index on a graph has reached the REGISTERED or ENABLED state.
      * @param index Index to process.
      * @param graph Name of the traversal alias to analyze. Default: `graph`
-     * @returns A promise of 1, indicating that 1 index has reached REGISTERED state.
+     * @returns A promise of 1, indicating that 1 index has reached REGISTERED or ENABLED state.
      */
     async waitForIndex(
         index: GraphIndex | VertexCentricIndex,
@@ -225,6 +225,43 @@ export class JanusGraphManager {
             await this.init();
             const gi = schema.graphIndices.map((i) => {
                 const builder = new EnableIndexBuilder(i.name, schema.name);
+                return builder.action('ENABLE_INDEX').build();
+            });
+            const vci = schema.vcIndices.map((i) => {
+                const builder = new EnableIndexBuilder(i.name, schema.name);
+                return builder
+                    .type('VertexCentric')
+                    .label(i.edgelabel)
+                    .action('ENABLE_INDEX')
+                    .build();
+            });
+            const count = (
+                await Promise.all(
+                    [...gi, ...vci].map(
+                        async (msg) => await this.client.submit(msg)
+                    )
+                )
+            ).length;
+            if (commit) {
+                await this.commit();
+            }
+            return Promise.resolve(count);
+        } catch (err) {
+            return Promise.reject(err);
+        }
+    }
+
+    /**
+     * Attempts to reindex all indices.
+     * @param schema - GraphSchema to reindex indicies for.
+     * @param commit - Whether or not to commit and close the traversal. Default: `false`
+     * @returns A promise containing the number of successful traversals made.
+     */
+    async reindexIndices(schema: GraphSchema, commit = false): Promise<number> {
+        try {
+            await this.init();
+            const gi = schema.graphIndices.map((i) => {
+                const builder = new EnableIndexBuilder(i.name, schema.name);
                 return builder.action('REINDEX').build();
             });
             const vci = schema.vcIndices.map((i) => {
@@ -246,6 +283,37 @@ export class JanusGraphManager {
                 await this.commit();
             }
             return Promise.resolve(count);
+        } catch (err) {
+            return Promise.reject(err);
+        }
+    }
+
+    /**
+     * Reindex an arbitrary index for an arbitrary graph.
+     * @param graphname The graph the index is located on.
+     * @param index The index to reindex.
+     * @param commit Whether or not to commit (default: `false`)
+     * @returns A promise containing the output of the reindex command.
+     */
+    async reindex(
+        graphname: string,
+        index: GraphIndex | VertexCentricIndex,
+        commit = false
+    ): Promise<unknown> {
+        try {
+            await this.init();
+            const builder = new EnableIndexBuilder(index.name, graphname);
+            if ((index as VertexCentricIndex).edgelabel != null) {
+                builder
+                    .type('VertexCentric')
+                    .label((index as VertexCentricIndex).edgelabel);
+            }
+            const msg = builder.action('REINDEX').build();
+            const output = await this.client.submit(msg);
+            if (commit) {
+                await this.commit();
+            }
+            return Promise.resolve(output);
         } catch (err) {
             return Promise.reject(err);
         }
@@ -317,10 +385,13 @@ export class JanusGraphManager {
     async getIndices(): Promise<unknown[]> {
         try {
             await this.init();
-            const data = await this.client.submit(
+            const vindices = await this.client.submit(
                 'mgmt.getGraphIndexes(Vertex.class)'
             );
-            return Promise.resolve(data._items);
+            const eindices = await this.client.submit(
+                'mgmt.getGraphIndexes(Edge.class)'
+            );
+            return Promise.resolve([vindices._items, eindices._items]);
         } catch (err) {
             return Promise.reject(err);
         }
@@ -335,8 +406,7 @@ export class JanusGraphManager {
             await this.init();
             const data = await this.client.submit('mgmt.printSchema()');
             return Promise.resolve(data._items);
-        }
-        catch (err) {
+        } catch (err) {
             return Promise.reject(err);
         }
     }
