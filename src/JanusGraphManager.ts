@@ -94,7 +94,10 @@ export class JanusGraphManager {
      */
     async createGraphIndex(index: GraphIndex, commit = false): Promise<number> {
         await this.init();
-        const builder = new GraphIndexBuilder(index.name);
+        const builder = new GraphIndexBuilder(
+            index.name,
+            index.element ?? 'Vertex'
+        );
         builder
             .label(index.label)
             .type(index.type)
@@ -226,7 +229,11 @@ export class JanusGraphManager {
             });
             const vci = schema.vcIndices.map((i) => {
                 const builder = new EnableIndexBuilder(i.name, schema.name);
-                return builder.type('VertexCentric').label(i.edgelabel).action('REINDEX').build();
+                return builder
+                    .type('VertexCentric')
+                    .label(i.edgelabel)
+                    .action('REINDEX')
+                    .build();
             });
             const count = (
                 await Promise.all(

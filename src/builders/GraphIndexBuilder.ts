@@ -1,5 +1,9 @@
 import { Builder } from './Builder.interface';
-import { CompositeOrMixedIndexType, IndexKey } from '../types/GraphIndex';
+import {
+    CompositeOrMixedIndexType,
+    ElementClass,
+    IndexKey,
+} from '../types/GraphIndex';
 
 /**
  * Index Builder for Composite or Mixed indices.
@@ -13,7 +17,7 @@ export class GraphIndexBuilder implements Builder<string> {
     private _label?: string;
     private _backend?: string;
 
-    constructor(private _name: string) {}
+    constructor(private _name: string, private _element: ElementClass) {}
 
     type(type: CompositeOrMixedIndexType): this {
         this._type = type;
@@ -53,7 +57,7 @@ export class GraphIndexBuilder implements Builder<string> {
             );
         }
         let output = `if (!mgmt.containsGraphIndex('${this._name}')) `;
-        output += `mgmt.buildIndex('${this._name}', Vertex.class)`;
+        output += `mgmt.buildIndex('${this._name}', ${this._element}.class)`;
         output += [...this._keys]
             .map(
                 (key) =>
