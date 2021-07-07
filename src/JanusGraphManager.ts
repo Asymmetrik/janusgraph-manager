@@ -327,6 +327,21 @@ export class JanusGraphManager {
     }
 
     /**
+     * Retrieves a console-friendly representation of the current graph schema
+     * @returns A promise containing a console-friendly string of the schema and state of indices
+     */
+    async printSchema(): Promise<string> {
+        try {
+            await this.init();
+            const data = await this.client.submit('mgmt.printSchema()');
+            return Promise.resolve(data._items);
+        }
+        catch (err) {
+            return Promise.reject(err);
+        }
+    }
+
+    /**
      * Leverages the gremlin client to commit a management message.
      * @param message Message to send prior to the commit. Not required.
      * @returns A promise from client commit submission.
