@@ -57,7 +57,7 @@ describe('GraphIndexBuilder', () => {
         expect(out).toContain(`.unique()`);
     });
 
-    it('should set a label', () => {
+    it('should set a label for a vertex index', () => {
         const gib = new GraphIndexBuilder('test', 'Vertex');
         const key = {
             field: 'testfield',
@@ -65,6 +65,16 @@ describe('GraphIndexBuilder', () => {
         } as IndexKey;
         const out = gib.key(key).label('testlabel').build();
         expect(out).toContain(`.indexOnly(mgmt.getVertexLabel('testlabel'))`);
+    });
+
+    it('should set a label for an edge index', () => {
+        const gib = new GraphIndexBuilder('test', 'Edge');
+        const key = {
+            field: 'testfield',
+            mapping: 'STRING',
+        } as IndexKey;
+        const out = gib.key(key).label('testlabel').build();
+        expect(out).toContain(`.indexOnly(mgmt.getEdgeLabel('testlabel'))`);
     });
 
     it('should build a mixed index', () => {
