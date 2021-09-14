@@ -1,6 +1,6 @@
 {
     "name": "@asymmetrik/janusgraph-manager",
-    "version": "0.5.4",
+    "version": "0.5.5",
     "description": "Janusgraph management tooling in NodeJS/Typescript",
     "keywords": [
         "janusgraph",
