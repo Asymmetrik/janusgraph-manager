@@ -71,7 +71,7 @@ export class GraphIndexBuilder implements Builder<string> {
         output += this._unique ? `.unique()` : '';
         output +=
             this._label != null
-                ? `.indexOnly(mgmt.getVertexLabel('${this._label}'))`
+                ? `.indexOnly(mgmt.get${this._element}Label('${this._label}'))`
                 : '';
         return output.concat(
             this._type === 'Mixed'
